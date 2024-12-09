@@ -1,9 +1,9 @@
 import os
 import pandas as pd
+from sklearn.metrics import classification_report, accuracy_score
+from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 import seaborn as sns
-from PIL import Image
-import numpy as np
 
 # Define absolute paths
 PROJECT_DIR = r"C:\Users\Barak\PycharmProjects\DLproject"
@@ -11,7 +11,6 @@ ARCHIVE_DIR = os.path.join(PROJECT_DIR, "archive")
 METADATA_PATH = os.path.join(ARCHIVE_DIR, "HAM10000_metadata.csv")
 IMAGES_PART1_DIR = os.path.join(ARCHIVE_DIR, "HAM10000_images_part_1")
 IMAGES_PART2_DIR = os.path.join(ARCHIVE_DIR, "HAM10000_images_part_2")
-
 
 def verify_paths():
     """Verify all required paths exist"""
@@ -29,115 +28,46 @@ def verify_paths():
 
     return all(os.path.exists(path) for path in paths.values())
 
-
-def plot_diagnosis_by_gender(df):
-    """Plot the distribution of diagnoses by gender"""
-    plt.figure(figsize=(14, 7))
-    sns.countplot(data=df, x='dx', hue='sex')
-    plt.title('Diagnosis Distribution by Gender')
-    plt.xlabel('Diagnosis')
-    plt.ylabel('Count')
-    plt.legend(title='Gender')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_age_distribution(df):
-    """Plot age distribution by diagnosis"""
-    plt.figure(figsize=(14, 7))
-    sns.boxplot(data=df, x='dx', y='age')
-    plt.title('Age Distribution by Diagnosis')
-    plt.xlabel('Diagnosis')
-    plt.ylabel('Age')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_class_imbalance(df):
-    """Plot a pie chart showing the class imbalance"""
-    plt.figure(figsize=(10, 8))
-    df['dx'].value_counts().plot.pie(autopct='%1.1f%%', startangle=90, cmap='Pastel1')
-    plt.title('Class Imbalance of Skin Lesion Types')
-    plt.ylabel('')  # Remove default y-axis label
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_cancerous_vs_age(df):
-    """Plot age distribution for cancerous vs non-cancerous lesions"""
-    cancerous_labels = ['mel', 'bcc', 'akiec']
-    df['is_cancerous'] = df['dx'].apply(lambda x: 'Cancerous' if x in cancerous_labels else 'Non-Cancerous')
-
-    plt.figure(figsize=(14, 7))
-    sns.boxplot(data=df, x='is_cancerous', y='age')
-    plt.title('Age Distribution: Cancerous vs Non-Cancerous Lesions')
-    plt.xlabel('Lesion Type')
-    plt.ylabel('Age')
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_missing_data(df):
-    """Plot a heatmap of missing data"""
-    plt.figure(figsize=(10, 6))
-    sns.heatmap(df.isnull(), cbar=False, cmap='viridis', yticklabels=False)
-    plt.title('Heatmap of Missing Data')
-    plt.tight_layout()
-    plt.show()
-
-
-def display_sample_images(df):
-    """Display sample images from the dataset"""
-    unique_diagnoses = df['dx'].unique()
-    num_samples = min(5, len(unique_diagnoses))
-
-    plt.figure(figsize=(15, 10))
-    for idx, diagnosis in enumerate(unique_diagnoses[:num_samples]):
-        # Get one sample image for each diagnosis
-        sample = df[df['dx'] == diagnosis].iloc[0]
-        image_id = sample['image_id']
-
-        # Try both image directories
-        img_path = os.path.join(IMAGES_PART1_DIR, f"{image_id}.jpg")
-        if not os.path.exists(img_path):
-            img_path = os.path.join(IMAGES_PART2_DIR, f"{image_id}.jpg")
-
-        if os.path.exists(img_path):
-            img = Image.open(img_path)
-            plt.subplot(2, 3, idx + 1)
-            plt.imshow(img)
-            plt.title(f"Type: {diagnosis}\nID: {image_id}")
-            plt.axis('off')
-
-    plt.tight_layout()
-    plt.show()
-
-
-def load_and_visualize():
-    """Load and visualize the HAM10000 dataset"""
+def load_metadata():
+    """Load the HAM10000 metadata."""
     try:
-        # Load metadata
         df = pd.read_csv(METADATA_PATH)
-        print("\nDataset Summary:")
-        print(f"Total images: {len(df)}")
+        print("Metadata loaded successfully.")
         print("\nDiagnosis distribution:")
         print(df['dx'].value_counts())
-
-        # Generate visualizations
-        plot_diagnosis_by_gender(df)
-        plot_age_distribution(df)
-        plot_class_imbalance(df)
-        plot_cancerous_vs_age(df)
-        plot_missing_data(df)
-
-        # Display sample images
-        display_sample_images(df)
-
+        return df
     except Exception as e:
-        print(f"Error occurred: {str(e)}")
+        print(f"Error loading metadata: {str(e)}")
+        return None
 
+def plot_class_distribution(df):
+    """Plot class distribution."""
+    plt.figure(figsize=(10, 6))
+    sns.countplot(data=df, x='dx')
+    plt.title('Class Distribution')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.show()
+
+def run_baseline(df):
+    """Run the baseline model pipeline."""
+    print("\nDetermining the majority class...")
+    majority_class = df['dx'].value_counts().idxmax()
+    print(f"Majority Class: {majority_class}")
+
+    print("\nSplitting data into training and testing sets...")
+    train_df, test_df = train_test_split(df, test_size=0.2, stratify=df['dx'], random_state=42)
+    print(f"Training Set: {len(train_df)} samples")
+    print(f"Testing Set: {len(test_df)} samples")
+
+    print("\nMaking baseline predictions...")
+    y_true = test_df['dx']
+    y_pred = [majority_class] * len(test_df)
+
+    print("\nEvaluating baseline performance...")
+    print(f"Accuracy: {accuracy_score(y_true, y_pred):.4f}")
+    print("\nClassification Report:")
+    print(classification_report(y_true, y_pred, target_names=y_true.unique()))
 
 def main():
     print("Verifying paths...")
@@ -145,11 +75,19 @@ def main():
 
     if paths_valid:
         print("\nAll paths verified successfully.")
-        print("\nAttempting to load and visualize data...")
-        load_and_visualize()
+
+        print("\nLoading metadata...")
+        df = load_metadata()
+        if df is None:
+            return
+
+        print("\nVisualizing data...")
+        plot_class_distribution(df)
+
+        print("\nRunning the baseline model...")
+        run_baseline(df)
     else:
         print("\nError: One or more paths are invalid. Please check your file structure.")
-
 
 if __name__ == "__main__":
     main()

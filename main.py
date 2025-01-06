@@ -43,13 +43,13 @@ def main():
         print("2. Run Logistic Regression Model")
         print("3. Run basic Neural Network ")
         print("4. Run complex Neural Network model ")
-        choice = input("Enter your choice (1/2): ")
+        choice = input("Enter your choice (1/4): ")
 
         if choice == "1":
-            print("\nRunning the baseline model...")
+            print("\nRunning the baseline model")
             run_baseline(df)
         elif choice == "2":
-            print("\nRunning the logistic regression model...")
+            print("\nRunning the logistic regression model")
             run_logistic_regression()
         elif choice == "3" :
             print("\n Running the basic Neural Network model")

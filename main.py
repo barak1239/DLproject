@@ -1,7 +1,7 @@
 import os
 from baseline import run_baseline, load_metadata
 from lg import main as run_logistic_regression
-
+from basicNN import main as run_basicNN
 # Define absolute paths
 PROJECT_DIR = r"C:\Users\Barak\PycharmProjects\DLproject"
 ARCHIVE_DIR = os.path.join(PROJECT_DIR, "archive")
@@ -41,6 +41,8 @@ def main():
         print("\nChoose an option:")
         print("1. Run Baseline Model")
         print("2. Run Logistic Regression Model")
+        print("3. Run basic Neural Network ")
+        print("4. Run complex Neural Network model ")
         choice = input("Enter your choice (1/2): ")
 
         if choice == "1":
@@ -49,6 +51,11 @@ def main():
         elif choice == "2":
             print("\nRunning the logistic regression model...")
             run_logistic_regression()
+        elif choice == "3" :
+            print("\n Running the basic Neural Network model")
+            run_basicNN()
+        elif choice == "4":
+            print("\n Running the complex Neural Network model")
         else:
             print("\nInvalid choice. Exiting.")
     else:

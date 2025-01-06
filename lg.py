@@ -1,104 +1,182 @@
 import os
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, accuracy_score
-from sklearn.decomposition import PCA
-from PIL import Image
 
+# For method (6) - Stratified split
+from sklearn.model_selection import StratifiedShuffleSplit
+
+##############################################################################
 # Define paths
+##############################################################################
 PROJECT_DIR = r"C:\Users\Barak\PycharmProjects\DLproject"
 ARCHIVE_DIR = os.path.join(PROJECT_DIR, "archive")
-METADATA_PATH = os.path.join(ARCHIVE_DIR, "HAM10000_metadata.csv")
-IMAGES_PART1_DIR = os.path.join(ARCHIVE_DIR, "HAM10000_images_part_1")
-IMAGES_PART2_DIR = os.path.join(ARCHIVE_DIR, "HAM10000_images_part_2")
+CSV_PATH = os.path.join(ARCHIVE_DIR, "hmnist_28_28_RGB.csv")
 
-def load_metadata():
-    """Load metadata and return as a DataFrame."""
+##############################################################################
+# Custom Dataset
+##############################################################################
+class SkinDataset(Dataset):
+    def __init__(self, features, labels):
+        """
+        Args:
+            features (ndarray): shape (num_samples, num_features).
+            labels   (ndarray): shape (num_samples,).
+        """
+        self.features = features
+        self.labels = labels
+
+    def __len__(self):
+        return len(self.labels)
+
+    def __getitem__(self, idx):
+        x = torch.tensor(self.features[idx], dtype=torch.float32)
+        y = torch.tensor(self.labels[idx], dtype=torch.long)
+        return x, y
+
+##############################################################################
+# Logistic Regression Model
+##############################################################################
+class LogisticRegressionModel(nn.Module):
+    """Single linear layer: input_dim -> num_classes."""
+    def __init__(self, input_dim, num_classes):
+        super(LogisticRegressionModel, self).__init__()
+        self.linear = nn.Linear(input_dim, num_classes)
+
+    def forward(self, x):
+        return self.linear(x)
+
+##############################################################################
+# Main function
+##############################################################################
+def main(csv_path=CSV_PATH,
+         test_size=0.2,        # 20% val split
+         patience=5,           # Early stopping patience
+         max_epochs=20,        # Up to 50 epochs
+         lr=5e-4,              # Learning rate
+         weight_decay=1e-4,    # L2 regularization
+         batch_size=64):
+
+    # 1. Load CSV data
     try:
-        df = pd.read_csv(METADATA_PATH)
-        print("Metadata loaded successfully.")
-        return df
-    except Exception as e:
-        print(f"Error loading metadata: {e}")
-        return None
-
-def load_images(df, image_size=(64, 64)):
-    """Load images as flattened arrays and return feature matrix."""
-    print("Loading images...")
-    image_data = []
-    labels = []
-
-    for index, row in df.iterrows():
-        image_id = row['image_id']
-        dx = row['dx']
-
-        # Check both image directories
-        img_path = os.path.join(IMAGES_PART1_DIR, f"{image_id}.jpg")
-        if not os.path.exists(img_path):
-            img_path = os.path.join(IMAGES_PART2_DIR, f"{image_id}.jpg")
-
-        if os.path.exists(img_path):
-            # Open, resize, and flatten the image
-            img = Image.open(img_path).resize(image_size)
-            image_data.append(np.array(img).flatten())
-            labels.append(dx)
-        else:
-            print(f"Image {image_id} not found.")
-
-    print(f"Loaded {len(image_data)} images.")
-    return np.array(image_data), np.array(labels)
-
-def train_logistic_regression(X_train, y_train):
-    """Train a logistic regression model."""
-    print("Training logistic regression model...")
-    model = LogisticRegression(max_iter=2000, solver='saga')
-    model.fit(X_train, y_train)
-    print("Model trained successfully.")
-    return model
-
-def evaluate_model(model, X_test, y_test):
-    """Evaluate the model and print metrics."""
-    print("Evaluating the model...")
-    y_pred = model.predict(X_test)
-    print(f"Accuracy: {accuracy_score(y_test, y_pred):.4f}")
-    print("\nClassification Report:")
-    print(classification_report(y_test, y_pred))
-
-def apply_pca(X_train, X_test, n_components=500):
-    """Apply PCA to reduce dimensionality."""
-    print(f"Applying PCA to reduce dimensionality to1 {n_components} components...")
-    pca = PCA(n_components=1024)
-    X_train_pca = pca.fit_transform(X_train)
-    X_test_pca = pca.transform(X_test)
-    print(f"PCA explained variance ratio: {sum(pca.explained_variance_ratio_):.4f}")
-    return X_train_pca, X_test_pca
-
-def main():
-    print("Loading metadata...")
-    df = load_metadata()
-    if df is None:
+        df = pd.read_csv(csv_path)
+    except FileNotFoundError:
+        print(f"Error: CSV file not found at: {csv_path}")
         return
 
-    # Split the dataset
-    print("Splitting data into training and testing sets...")
-    train_df, test_df = train_test_split(df, test_size=0.2, stratify=df['dx'], random_state=42)
+    if 'label' not in df.columns:
+        print("Error: 'label' column not found in the CSV. Please check your dataset.")
+        return
 
-    # Load images and labels
-    X_train, y_train = load_images(train_df, image_size=(32, 32))  # Higher resolution
-    X_test, y_test = load_images(test_df, image_size=(32, 32))
+    # Separate features & labels
+    all_features = df.drop('label', axis=1).values.astype(np.float32)
+    all_features /= 255.0  # normalize pixel values to [0, 1]
 
-    # Normalize image data
-    X_train = X_train / 255.0  # Scale pixel values to [0, 1]
-    X_test = X_test / 255.0
+    all_labels = df['label'].values
 
-    # Apply PCA for dimensionality reduction
-    X_train_pca, X_test_pca = apply_pca(X_train, X_test, n_components=100)
+    print(f"Loaded dataset from: {csv_path}")
+    print("Features shape:", all_features.shape)  # e.g. (N, 2352) for 28×28 RGB
+    print("Labels shape:", all_labels.shape)
 
-    # Train and evaluate logistic regression
-    model = train_logistic_regression(X_train_pca, y_train)
-    evaluate_model(model, X_test_pca, y_test)
+    # 2. Stratified train/val split (method 6)
+    sss = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=42)
+    for train_idx, val_idx in sss.split(all_features, all_labels):
+        train_features_raw, val_features_raw = all_features[train_idx], all_features[val_idx]
+        train_labels_raw, val_labels_raw = all_labels[train_idx], all_labels[val_idx]
+
+    # Create PyTorch Datasets from the raw features (no PCA)
+    train_dataset = SkinDataset(train_features_raw, train_labels_raw)
+    val_dataset   = SkinDataset(val_features_raw,   val_labels_raw)
+
+    # Create DataLoaders
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader   = DataLoader(val_dataset,   batch_size=batch_size, shuffle=False)
+
+    # 3. Define logistic regression model
+    input_dim = train_features_raw.shape[1]  # e.g. 2352 for 28×28 RGB
+    num_classes = len(np.unique(all_labels))
+    model = LogisticRegressionModel(input_dim, num_classes)
+
+    # Define loss & optimizer
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+
+    # 4. Training with early stopping (method 4)
+    print("\nStarting training with early stopping (no PCA)...")
+
+    best_val_acc = 0.0
+    epochs_no_improve = 0
+
+    for epoch in range(1, max_epochs + 1):
+        model.train()
+        running_loss = 0.0
+
+        for batch_features, batch_labels in train_loader:
+            optimizer.zero_grad()
+            outputs = model(batch_features)
+            loss = criterion(outputs, batch_labels)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item() * batch_features.size(0)
+
+        epoch_loss = running_loss / len(train_loader.dataset)
+
+        # Validation
+        model.eval()
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            for val_features_batch, val_labels_batch in val_loader:
+                val_outputs = model(val_features_batch)
+                _, predicted = torch.max(val_outputs, 1)
+                total += val_labels_batch.size(0)
+                correct += (predicted == val_labels_batch).sum().item()
+
+        val_accuracy = 100.0 * correct / total
+        print(f"Epoch [{epoch}/{max_epochs}] - "
+              f"Train Loss: {epoch_loss:.4f}, "
+              f"Val Accuracy: {val_accuracy:.2f}%")
+
+        # Early stopping check
+        if val_accuracy > best_val_acc:
+            best_val_acc = val_accuracy
+            epochs_no_improve = 0
+        else:
+            epochs_no_improve += 1
+
+        if epochs_no_improve >= patience:
+            print("Early stopping triggered!")
+            break
+
+    # 5. Single sample test (optional)
+    if len(val_dataset) > 0:
+        model.eval()
+        sample_idx = 0
+        sample_features, sample_label = val_dataset[sample_idx]
+        sample_features = sample_features.unsqueeze(0)
+
+        with torch.no_grad():
+            output = model(sample_features)
+            _, predicted_class = torch.max(output, 1)
+
+        print(f"\nValidation sample index [{sample_idx}]")
+        print("Predicted class:", predicted_class.item())
+        print("Ground truth class:", sample_label.item())
+
+    print(f"\nBest validation accuracy achieved: {best_val_acc:.2f}%")
+    print("Training + early stopping run completed.")
 
 if __name__ == "__main__":
-    main()
+    # Example usage:
+    main(
+        csv_path=CSV_PATH,
+        test_size=0.2,
+        patience=5,
+        max_epochs=50,
+        lr=1e-4,
+        weight_decay=1e-5,
+        batch_size=64
+    )

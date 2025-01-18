@@ -22,7 +22,7 @@ CSV_PATH = os.path.join(ARCHIVE_DIR, "hmnist_28_28_RGB.csv")
 ##############################################################################
 class SkinDataset(Dataset):
     def __init__(self, features, labels, transform=None):
-        self.features = features.reshape(-1, 1, 28, 28)  # Reshape to 1x28x28 for CNN
+        self.features = features.reshape(-1, 3, 28, 28)  # Reshape to 3x28x28 for RGB
         self.labels = labels
         self.transform = transform
 
@@ -42,7 +42,7 @@ class SkinDataset(Dataset):
 class ImprovedCNNModel(nn.Module):
     def __init__(self, num_classes):
         super(ImprovedCNNModel, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=1)
+        self.conv1 = nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=1)
         self.bn1 = nn.BatchNorm2d(32)
         self.relu1 = nn.ReLU()
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)

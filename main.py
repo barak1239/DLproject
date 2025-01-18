@@ -2,13 +2,13 @@ import os
 from baseline import run_baseline, load_metadata
 from lg import main as run_logistic_regression
 from basicNN import main as run_basicNN
+from CNN import main as run_CNN
 # Define absolute paths
 PROJECT_DIR = r"C:\Users\Barak\PycharmProjects\DLproject"
 ARCHIVE_DIR = os.path.join(PROJECT_DIR, "archive")
 METADATA_PATH = os.path.join(ARCHIVE_DIR, "HAM10000_metadata.csv")
 IMAGES_PART1_DIR = os.path.join(ARCHIVE_DIR, "HAM10000_images_part_1")
 IMAGES_PART2_DIR = os.path.join(ARCHIVE_DIR, "HAM10000_images_part_2")
-
 def verify_paths():
     """Verify all required paths exist."""
     paths = {
@@ -56,6 +56,7 @@ def main():
             run_basicNN()
         elif choice == "4":
             print("\n Running the complex Neural Network model")
+            run_CNN()
         else:
             print("\nInvalid choice. Exiting.")
     else:

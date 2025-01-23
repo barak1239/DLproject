@@ -6,11 +6,10 @@ from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.metrics import precision_score, recall_score
 import wandb  # ייבוא WandB
+# Dataset
 
-##############################################################################
-# Custom Dataset
-##############################################################################
 PROJECT_DIR = r"C:\Users\Barak\PycharmProjects\DLproject"
 ARCHIVE_DIR = os.path.join(PROJECT_DIR, "archive")
 CSV_PATH = os.path.join(ARCHIVE_DIR, "hmnist_28_28_RGB.csv")
@@ -27,10 +26,8 @@ class SkinDataset(Dataset):
         x = torch.tensor(self.features[idx], dtype=torch.float32)
         y = torch.tensor(self.labels[idx], dtype=torch.long)
         return x, y
-
-##############################################################################
 # Logistic Regression Model
-##############################################################################
+
 class LogisticRegressionModel(nn.Module):
     def __init__(self, input_dim, num_classes):
         super(LogisticRegressionModel, self).__init__()
@@ -39,9 +36,8 @@ class LogisticRegressionModel(nn.Module):
     def forward(self, x):
         return self.linear(x)
 
-##############################################################################
 # Main function
-##############################################################################
+
 def main(csv_path=CSV_PATH,
          test_size=0.2,        # 20% test split
          patience=5,           # Early stopping patience
@@ -77,15 +73,15 @@ def main(csv_path=CSV_PATH,
     all_labels = df['label'].values
 
     sss = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=42)
-    for train_idx, test_idx in sss.split(all_features, all_labels):  # שינוי val ל-test
+    for train_idx, test_idx in sss.split(all_features, all_labels):
         train_features_raw, test_features_raw = all_features[train_idx], all_features[test_idx]
         train_labels_raw, test_labels_raw = all_labels[train_idx], all_labels[test_idx]
 
     train_dataset = SkinDataset(train_features_raw, train_labels_raw)
-    test_dataset = SkinDataset(test_features_raw, test_labels_raw)  # test במקום val
+    test_dataset = SkinDataset(test_features_raw, test_labels_raw)
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)  # test במקום val
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     input_dim = train_features_raw.shape[1]
     num_classes = len(np.unique(all_labels))
@@ -102,6 +98,9 @@ def main(csv_path=CSV_PATH,
         correct_train = 0
         total_train = 0
 
+        all_preds_train = []
+        all_labels_train = []
+
         for batch_features, batch_labels in train_loader:
             optimizer.zero_grad()
             outputs = model(batch_features)
@@ -110,35 +109,46 @@ def main(csv_path=CSV_PATH,
             optimizer.step()
             running_loss += loss.item() * batch_features.size(0)
 
-            # Accuracy for train
             _, predicted = torch.max(outputs, 1)
             total_train += batch_labels.size(0)
             correct_train += (predicted == batch_labels).sum().item()
 
+            all_preds_train.extend(predicted.cpu().numpy())
+            all_labels_train.extend(batch_labels.cpu().numpy())
+
         epoch_loss = running_loss / len(train_loader.dataset)
         train_accuracy = 100.0 * correct_train / total_train
-        train_error = 100.0 - train_accuracy  # Calculate train error
+        train_error = 100.0 - train_accuracy
+
+        train_precision = precision_score(all_labels_train, all_preds_train, average='macro')
+        train_recall = recall_score(all_labels_train, all_preds_train, average='macro')
 
         print(f"Epoch [{epoch}/{max_epochs}] - "
               f"Train Loss: {epoch_loss:.4f}, "
               f"Train Accuracy: {train_accuracy:.2f}%, "
-              f"Train Error: {train_error:.2f}%")
+              f"Train Error: {train_error:.2f}%, "
+              f"Train Precision: {train_precision:.4f}, "
+              f"Train Recall: {train_recall:.4f}")
 
         # Log metrics to WandB
         wandb.log({
             "epoch": epoch,
             "train_loss": epoch_loss,
             "train_accuracy": train_accuracy,
-            "train_error": train_error
+            "train_error": train_error,
+            "train_precision": train_precision,
+            "train_recall": train_recall
         })
 
-        # Early stopping counter
         epochs_completed += 1
 
     # Test Evaluation
     model.eval()
     correct_test = 0
     total_test = 0
+    all_preds_test = []
+    all_labels_test = []
+
     with torch.no_grad():
         for test_features_batch, test_labels_batch in test_loader:
             test_outputs = model(test_features_batch)
@@ -146,14 +156,25 @@ def main(csv_path=CSV_PATH,
             total_test += test_labels_batch.size(0)
             correct_test += (predicted == test_labels_batch).sum().item()
 
-    test_accuracy = 100.0 * correct_test / total_test
-    print(f"\nTest Accuracy: {test_accuracy:.2f}%")
+            all_preds_test.extend(predicted.cpu().numpy())
+            all_labels_test.extend(test_labels_batch.cpu().numpy())
 
-    # Log Test Accuracy and completed epochs to WandB
+    test_accuracy = 100.0 * correct_test / total_test
+    test_precision = precision_score(all_labels_test, all_preds_test, average='macro')
+    test_recall = recall_score(all_labels_test, all_preds_test, average='macro')
+
+    print(f"\nTest Accuracy: {test_accuracy:.2f}%\n" 
+          f"Test Precision: {test_precision:.4f}, "
+          f"Test Recall: {test_recall:.4f}")
+
+    # Log Test metrics to WandB
     wandb.log({
         "test_accuracy": test_accuracy,
+        "test_precision": test_precision,
+        "test_recall": test_recall,
         "epochs_completed": epochs_completed
     })
+
     wandb.finish()
 
 if __name__ == "__main__":

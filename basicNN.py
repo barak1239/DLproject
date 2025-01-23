@@ -5,20 +5,16 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader, random_split
 import pandas as pd
 import numpy as np
-from sklearn.metrics import recall_score
+from sklearn.metrics import recall_score, precision_score
 import wandb  # ייבוא WandB
 import copy
 
-##############################################################################
-# Define your absolute or well-constructed path here:
-##############################################################################
+
 PROJECT_DIR = r"C:\Users\Barak\PycharmProjects\DLproject"
 ARCHIVE_DIR = os.path.join(PROJECT_DIR, "archive")
 CSV_PATH = os.path.join(ARCHIVE_DIR, "hmnist_28_28_RGB.csv")
 
-##############################################################################
 # Dataset definition
-##############################################################################
 class SkinDataset(Dataset):
     def __init__(self, features, labels):
         self.features = features
@@ -32,9 +28,7 @@ class SkinDataset(Dataset):
         y = torch.tensor(self.labels[idx], dtype=torch.long)
         return x, y
 
-##############################################################################
 # Model definition
-##############################################################################
 class NeuralNetworkModel(nn.Module):
     def __init__(self, input_dim, num_classes):
         super(NeuralNetworkModel, self).__init__()
@@ -56,9 +50,7 @@ class NeuralNetworkModel(nn.Module):
         x = self.fc3(x)
         return x
 
-##############################################################################
 # Main function
-##############################################################################
 def main(csv_path=CSV_PATH):
     # Initialize WandB
     wandb.init(project="Deep Learning", name="neural_network_model")
@@ -110,6 +102,9 @@ def main(csv_path=CSV_PATH):
         correct_train = 0
         total_train = 0
 
+        all_preds_train = []
+        all_labels_train = []
+
         for batch_features, batch_labels in train_loader:
             optimizer.zero_grad()
             outputs = model(batch_features)
@@ -122,15 +117,24 @@ def main(csv_path=CSV_PATH):
             total_train += batch_labels.size(0)
             correct_train += (predicted == batch_labels).sum().item()
 
+            all_preds_train.extend(predicted.cpu().numpy())
+            all_labels_train.extend(batch_labels.cpu().numpy())
+
         train_loss /= len(train_loader.dataset)
         train_accuracy = 100 * correct_train / total_train
         train_error = 100 - train_accuracy
+
+        train_precision = precision_score(all_labels_train, all_preds_train, average='macro')
+        train_recall = recall_score(all_labels_train, all_preds_train, average='macro')
 
         # Validation
         model.eval()
         val_loss = 0.0
         correct_val = 0
         total_val = 0
+
+        all_preds_val = []
+        all_labels_val = []
 
         with torch.no_grad():
             for batch_features, batch_labels in val_loader:
@@ -141,19 +145,35 @@ def main(csv_path=CSV_PATH):
                 total_val += batch_labels.size(0)
                 correct_val += (predicted == batch_labels).sum().item()
 
+                all_preds_val.extend(predicted.cpu().numpy())
+                all_labels_val.extend(batch_labels.cpu().numpy())
+
         val_loss /= len(val_loader.dataset)
         val_accuracy = 100 * correct_val / total_val
 
+        val_precision = precision_score(all_labels_val, all_preds_val, average='macro')
+        val_recall = recall_score(all_labels_val, all_preds_val, average='macro')
+
         print(f"Epoch [{epoch + 1}/{num_epochs}] - "
               f"Train Error: {train_error:.2f}%, "
+              f"Train Precision: {train_precision:.4f}, "
+              f"Train Recall: {train_recall:.4f}, "
               f"Val Loss: {val_loss:.4f}, "
-              f"Val Accuracy: {val_accuracy:.2f}%")
+              f"Val Accuracy: {val_accuracy:.2f}%, "
+              f"Val Precision: {val_precision:.4f}, "
+              f"Val Recall: {val_recall:.4f}")
 
         wandb.log({
             "epoch": epoch + 1,
-            "train_loss": train_loss,  # דיווח Train Loss
+            "train_loss": train_loss,
+            "train_accuracy": train_accuracy,
+            "train_error": train_error,
+            "train_precision": train_precision,
+            "train_recall": train_recall,
             "val_loss": val_loss,
             "val_accuracy": val_accuracy,
+            "val_precision": val_precision,
+            "val_recall": val_recall,
         })
 
         # Track best validation accuracy
@@ -169,6 +189,9 @@ def main(csv_path=CSV_PATH):
     correct_test = 0
     total_test = 0
 
+    all_preds_test = []
+    all_labels_test = []
+
     with torch.no_grad():
         for batch_features, batch_labels in test_loader:
             outputs = model(batch_features)
@@ -176,15 +199,25 @@ def main(csv_path=CSV_PATH):
             total_test += batch_labels.size(0)
             correct_test += (predicted == batch_labels).sum().item()
 
+            all_preds_test.extend(predicted.cpu().numpy())
+            all_labels_test.extend(batch_labels.cpu().numpy())
+
     test_accuracy = 100 * correct_test / total_test
     test_error = 100 - test_accuracy
 
+    test_precision = precision_score(all_labels_test, all_preds_test, average='macro')
+    test_recall = recall_score(all_labels_test, all_preds_test, average='macro')
+
     print(f"Test Accuracy: {test_accuracy:.2f}%")
     print(f"Test Error: {test_error:.2f}%")
+    print(f"Test Precision: {test_precision:.4f}")
+    print(f"Test Recall: {test_recall:.4f}")
 
     wandb.log({
         "test_error": test_error,
         "test_accuracy": test_accuracy,
+        "test_precision": test_precision,
+        "test_recall": test_recall,
     })
 
     wandb.finish()

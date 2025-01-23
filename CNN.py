@@ -5,21 +5,17 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader, random_split
 import pandas as pd
 import numpy as np
-from sklearn.metrics import recall_score
+from sklearn.metrics import precision_score, recall_score
 import wandb
 import copy
 from torchvision import transforms
 
-##############################################################################
-# Define your absolute or well-constructed path here:
-##############################################################################
 PROJECT_DIR = r"C:\Users\Barak\PycharmProjects\DLproject"
 ARCHIVE_DIR = os.path.join(PROJECT_DIR, "archive")
 CSV_PATH = os.path.join(ARCHIVE_DIR, "hmnist_28_28_RGB.csv")
 
-##############################################################################
 # Dataset definition
-##############################################################################
+
 class SkinDataset(Dataset):
     def __init__(self, features, labels, transform=None):
         self.features = features.reshape(-1, 3, 28, 28)  # Reshape to 3x28x28 for RGB
@@ -36,9 +32,8 @@ class SkinDataset(Dataset):
         y = torch.tensor(self.labels[idx], dtype=torch.long)
         return x, y
 
-##############################################################################
 # CNN Model definition
-##############################################################################
+
 class ImprovedCNNModel(nn.Module):
     def __init__(self, num_classes):
         super(ImprovedCNNModel, self).__init__()
@@ -85,9 +80,8 @@ class ImprovedCNNModel(nn.Module):
         x = self.fc2(x)
         return x
 
-##############################################################################
+
 # Main function
-##############################################################################
 def main(csv_path=CSV_PATH):
     # Initialize WandB
     wandb.init(project="Deep Learning", name="improved_cnn_model")
@@ -164,6 +158,8 @@ def main(csv_path=CSV_PATH):
         val_loss = 0.0
         correct_val = 0
         total_val = 0
+        all_labels = []
+        all_predictions = []
 
         with torch.no_grad():
             for batch_features, batch_labels in val_loader:
@@ -174,20 +170,29 @@ def main(csv_path=CSV_PATH):
                 total_val += batch_labels.size(0)
                 correct_val += (predicted == batch_labels).sum().item()
 
+                all_labels.extend(batch_labels.cpu().numpy())
+                all_predictions.extend(predicted.cpu().numpy())
+
         val_loss /= len(val_loader.dataset)
         val_accuracy = 100 * correct_val / total_val
+        val_precision = precision_score(all_labels, all_predictions, average="macro")
+        val_recall = recall_score(all_labels, all_predictions, average="macro")
         scheduler.step(val_accuracy)
 
         print(f"Epoch [{epoch + 1}/{num_epochs}] - "
               f"Train Accuracy: {train_accuracy:.2f}%, "
               f"Val Loss: {val_loss:.4f}, "
-              f"Val Accuracy: {val_accuracy:.2f}%")
+              f"Val Accuracy: {val_accuracy:.2f}%, "
+              f"Val Precision: {val_precision:.2f}, "
+              f"Val Recall: {val_recall:.2f}")
 
         wandb.log({
             "epoch": epoch + 1,
             "train_loss": train_loss,
             "val_loss": val_loss,
             "val_accuracy": val_accuracy,
+            "val_precision": val_precision,
+            "val_recall": val_recall,
             "learning_rate": optimizer.param_groups[0]['lr']
         })
 
@@ -201,6 +206,8 @@ def main(csv_path=CSV_PATH):
     model = best_model
     correct_test = 0
     total_test = 0
+    all_test_labels = []
+    all_test_predictions = []
 
     with torch.no_grad():
         for batch_features, batch_labels in test_loader:
@@ -209,10 +216,23 @@ def main(csv_path=CSV_PATH):
             total_test += batch_labels.size(0)
             correct_test += (predicted == batch_labels).sum().item()
 
-    test_accuracy = 100 * correct_test / total_test
-    print(f"Test Accuracy: {test_accuracy:.2f}%")
+            all_test_labels.extend(batch_labels.cpu().numpy())
+            all_test_predictions.extend(predicted.cpu().numpy())
 
-    wandb.log({"test_accuracy": test_accuracy})
+    test_accuracy = 100 * correct_test / total_test
+    test_precision = precision_score(all_test_labels, all_test_predictions, average="macro")
+    test_recall = recall_score(all_test_labels, all_test_predictions, average="macro")
+
+    print(f"Test Accuracy: {test_accuracy:.2f}%, "
+          f"Test Precision: {test_precision:.2f}, "
+          f"Test Recall: {test_recall:.2f}")
+
+    wandb.log({
+        "test_accuracy": test_accuracy,
+        "test_precision": test_precision,
+        "test_recall": test_recall
+    })
+
     wandb.finish()
 
 if __name__ == "__main__":

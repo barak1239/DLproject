@@ -1,4 +1,4 @@
-![image](https://github.com/user-attachments/assets/b9ab08d2-887b-4678-a802-d1b5f80c4514)Skin Lesion Classification: A Comparative Study of Multiple ML Models
+Skin Lesion Classification: A Comparative Study of Multiple ML Models
 1. Introduction
 This project explores the HAM10000 dataset of dermatoscopic images, applying multiple machine learning models to classify various skin lesions. We compare four approaches—Baseline (majority-class), Logistic Regression, a Basic Neural Network, and a CNN—to test the hypothesis that increasing model complexity leads to better performance and more localized, clinically relevant feature extraction.
 
@@ -117,13 +117,13 @@ Figure 14: Grad-CAM example, showing Original Image, Heatmap, and Overlay.
 Each set of logs demonstrates the performance trends for that particular model, confirming our hypothesis about the correlation between model complexity and performance.
 
 ![image](https://github.com/user-attachments/assets/d9932b3b-e354-43dd-8d95-44ed25651257)
-![image](https://github.com/user-attachments/assets/9e0efc26-6b6d-4b28-a15d-9bcd4d2f9b01)
-![image](https://github.com/user-attachments/assets/f6e10536-4361-4fa8-8cab-2f8960b5a67d)
-![image](https://github.com/user-attachments/assets/1ea1e41d-f92e-403f-b1dc-09dcb13e9427)
-![image](https://github.com/user-attachments/assets/584ea47e-0a83-4891-8919-a0702b4590bc)
-![image](https://github.com/user-attachments/assets/f0833c69-49b8-4d11-be19-7108c6a4ff47)
-![image](https://github.com/user-attachments/assets/527dc514-2123-475e-b734-4923751f9153)
-![image](https://github.com/user-attachments/assets/eb5b0545-c298-42b8-81bc-69d81c768258)
+![image](https://github.com/user-attachments/assets/e214e3e1-7fa4-4be4-8ae0-c561a94fe646)
+![image](https://github.com/user-attachments/assets/db65f277-4603-401d-82e8-e5d565f70e77)
+![image](https://github.com/user-attachments/assets/0184e65d-085e-44e7-bef0-bfb0c1a5d1b5)
+![image](https://github.com/user-attachments/assets/c98f0e1b-adb4-43ab-a002-93ae5d9cd467)
+![image](https://github.com/user-attachments/assets/4f4fd88c-e0fa-4455-a446-e64f28cfcc14)
+![image](https://github.com/user-attachments/assets/450ccaba-b8df-4b48-8f8e-f8cde6a2b81e)
+![image](https://github.com/user-attachments/assets/db6e982b-65b1-4bbe-9435-8b2441ba09bc)
 ![image](https://github.com/user-attachments/assets/6c14be86-88d1-4d92-b07b-1cce01d7fa3d)
 ![image](https://github.com/user-attachments/assets/c07a19be-973a-4261-addd-b60168321d2e)
 ![image](https://github.com/user-attachments/assets/8d6b07f4-6c1d-41b4-86ec-6b1c45ec8198)

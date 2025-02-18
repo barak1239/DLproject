@@ -30,6 +30,34 @@ This project explores the HAM10000 dataset of dermatoscopic images, applying mul
 Different classes of machine learning models—from simple linear classifiers to deep convolutional neural networks—capture distinct aspects of the underlying data distribution in skin lesion images.
 We hypothesize that simpler models (like logistic regression) primarily learn global linear separability, whereas more complex architectures (basic NNs, CNNs) uncover hierarchical, non-linear representations aligned with subtle pathological features.
 
+##Behind our thinking: How Simpler Models Learn (e.g., Logistic Regression)
+Global Linear Separability:
+Logistic regression is fundamentally a linear model, meaning it tries to find a single hyperplane (or line, in lower dimensions) that separates the classes. In the context of skin lesion images, this translates to assigning weights to each pixel (or derived feature) in a way that maximizes overall separation.
+Limitations:
+Logistic regression cannot easily capture non-linearities (e.g., complex color gradients or texture variations).
+It essentially flattens the 2D spatial structure of images into a single vector, losing local spatial information critical for distinguishing subtle lesion characteristics.
+Transition to Basic Neural Networks
+Non-linear Feature Learning:
+A basic feedforward neural network introduces hidden layers with non-linear activations (like ReLU or sigmoid). These layers can learn more complex relationships between input pixels.
+Still Lacking Spatial Awareness:
+Even though it’s more powerful than logistic regression, a simple multi-layer perceptron (MLP) still treats the image as a flattened array of pixels.
+It can learn non-linear patterns, but it does not inherently recognize “where” in the image certain features appear, limiting its ability to exploit local structures or textures.
+Hierarchical, Localized Representations in CNNs
+Local Receptive Fields:
+Convolutional Neural Networks (CNNs) process images in small patches (kernels), preserving local spatial information. Early layers learn edges and simple textures; deeper layers combine these into more complex shapes.
+Spatial Pooling:
+Pooling layers (like max-pool) aggregate nearby features, allowing the network to become progressively more invariant to small shifts or rotations—important in dermatoscopic images where lesions can appear at varying positions or orientations.
+Clinical Relevance:
+CNNs effectively capture subtle color variations, irregular borders, and texture gradients—factors that dermatologists look for when identifying malignant vs. benign lesions.
+By learning a hierarchy of features (from edges to higher-level concepts like lesion “patterns”), CNNs align more naturally with the way clinicians visually assess skin images.
+
+## Why This Matters for Skin Lesion Classification
+Importance of Subtle Patterns:
+Lesion classification often hinges on fine-grained details—tiny color variations or faint borders that distinguish a benign nevus from a melanoma.
+
+Linear models usually fail to capture these nuances.
+Basic NNs do better but still treat the image globally without leveraging the spatial layout.
+CNNs can zoom in on localized patches, effectively modeling the complex, non-linear aspects of lesions.
 
 ### Key Points
 - **Performance Gains:** Deep models capture fine-grained, localized features, crucial for differentiating benign vs. malignant lesions.

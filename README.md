@@ -10,7 +10,7 @@ This project explores the HAM10000 dataset of dermatoscopic images, applying mul
 We test the hypothesis that increasing model complexity leads to better performance and more localized, clinically relevant feature extraction.
 
 ## 2. Dataset Overview
-**Source:** The HAM10000 ("Human Against Machine with 10000 training images") dataset.
+**Source:** The HAM10000 dataset.
 
 **Classes:** Each image is labeled with one of seven lesion types:
 - Actinic keratoses (akiec)

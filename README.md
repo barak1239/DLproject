@@ -30,18 +30,21 @@ This project explores the HAM10000 dataset of dermatoscopic images, applying mul
 Different classes of machine learning models—from simple linear classifiers to deep convolutional neural networks—capture distinct aspects of the underlying data distribution in skin lesion images.
 We hypothesize that simpler models (like logistic regression) primarily learn global linear separability, whereas more complex architectures (basic NNs, CNNs) uncover hierarchical, non-linear representations aligned with subtle pathological features.
 
-##Behind our thinking: How Simpler Models Learn (e.g., Logistic Regression)
+## Behind our thinking: 
+How Simpler Models Learn (e.g., Logistic Regression)
 Global Linear Separability:
 Logistic regression is fundamentally a linear model, meaning it tries to find a single hyperplane (or line, in lower dimensions) that separates the classes. In the context of skin lesion images, this translates to assigning weights to each pixel (or derived feature) in a way that maximizes overall separation.
 Limitations:
 Logistic regression cannot easily capture non-linearities (e.g., complex color gradients or texture variations).
 It essentially flattens the 2D spatial structure of images into a single vector, losing local spatial information critical for distinguishing subtle lesion characteristics.
+
 Transition to Basic Neural Networks
 Non-linear Feature Learning:
 A basic feedforward neural network introduces hidden layers with non-linear activations (like ReLU or sigmoid). These layers can learn more complex relationships between input pixels.
 Still Lacking Spatial Awareness:
 Even though it’s more powerful than logistic regression, a simple multi-layer perceptron (MLP) still treats the image as a flattened array of pixels.
 It can learn non-linear patterns, but it does not inherently recognize “where” in the image certain features appear, limiting its ability to exploit local structures or textures.
+
 Hierarchical, Localized Representations in CNNs
 Local Receptive Fields:
 Convolutional Neural Networks (CNNs) process images in small patches (kernels), preserving local spatial information. Early layers learn edges and simple textures; deeper layers combine these into more complex shapes.

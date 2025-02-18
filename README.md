@@ -124,7 +124,6 @@ Each set of logs demonstrates the performance trends for that particular model, 
 ![image](https://github.com/user-attachments/assets/4f4fd88c-e0fa-4455-a446-e64f28cfcc14)
 ![image](https://github.com/user-attachments/assets/450ccaba-b8df-4b48-8f8e-f8cde6a2b81e)
 ![image](https://github.com/user-attachments/assets/db6e982b-65b1-4bbe-9435-8b2441ba09bc)
-![image](https://github.com/user-attachments/assets/6c14be86-88d1-4d92-b07b-1cce01d7fa3d)
 ![image](https://github.com/user-attachments/assets/c07a19be-973a-4261-addd-b60168321d2e)
 ![image](https://github.com/user-attachments/assets/8d6b07f4-6c1d-41b4-86ec-6b1c45ec8198)
 ![image](https://github.com/user-attachments/assets/e922dfa7-66d9-40ba-9ac7-66f69d5154c0)

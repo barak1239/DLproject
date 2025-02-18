@@ -1,124 +1,109 @@
-# Skin Lesion Classification: A Comparative Study of Multiple ML Models
+Skin Lesion Classification: A Comparative Study of Multiple ML Models
+1. Introduction
+This project explores the HAM10000 dataset of dermatoscopic images, applying multiple machine learning models to classify various skin lesions. We compare four approaches—Baseline (majority-class), Logistic Regression, a Basic Neural Network, and a CNN—to test the hypothesis that increasing model complexity leads to better performance and more localized, clinically relevant feature extraction.
 
-## 1. Introduction
-This project explores the HAM10000 dataset of dermatoscopic images, applying multiple machine learning models to classify various skin lesions. We compare four approaches:
-- **Baseline (majority-class)**
-- **Logistic Regression**
-- **Basic Neural Network**
-- **Convolutional Neural Network (CNN)**
+2. Dataset Overview
+Source: The HAM10000 (“Human Against Machine with 10000 training images”) dataset.
+Classes: Each image is labeled with one of seven lesion types (akiec, bcc, bkl, df, mel, nv, vas).
+Metadata: Contains additional patient info (age, sex, localization) for further analysis.
+2.1 Data Visualization
+Class Distribution
 
-We test the hypothesis that increasing model complexity leads to better performance and more localized, clinically relevant feature extraction.
+Figure 1 (Diagnosis Distribution): Shows a bar chart of numeric labels (0–6) or dx codes. You can see a clear imbalance: label 0.0 (often “nv”) is the majority class with around 7000 samples, while other classes have far fewer images.
+Representative Images
 
-## 2. Dataset Overview
-**Source:** The HAM10000 dataset.
+Figures 2–9 (Sample Images per Class): Each figure shows three images side by side, labeled by image_id. Above these images is a suptitle indicating the lesion class.
+For instance, in Figure 2, we see IDs ISIC_0024646, ISIC_0027753, and ISIC_0032404 from the same class.
+Each subsequent figure (3–9) similarly shows sample images from other classes. This helps us visually confirm the variety of lesion appearances (color, texture, borders).
+Grad-CAM Example
 
-**Classes:** Each image is labeled with one of seven lesion types:
-- Actinic keratoses (akiec)
-- Basal cell carcinoma (bcc)
-- Benign keratosis-like lesions (bkl)
-- Dermatofibroma (df)
-- Melanoma (mel)
-- Melanocytic nevi (nv)
-- Vascular lesions (vas)
+Figure 10 (Grad-CAM on 28×28 normalized image): Illustrates the original image, the Grad-CAM heatmap, and the overlay. The model (CNN) focuses on the lower region in the heatmap, indicating which pixels contributed most to its prediction.
+3. Hypothesis
+Different classes of machine learning models—from simple linear classifiers to deep convolutional neural networks—capture distinct aspects of the underlying data distribution in skin lesion images.
+We hypothesize that simpler models (like logistic regression) primarily learn global linear separability, whereas more complex architectures (basic NNs, CNNs) uncover hierarchical, non-linear representations aligned with subtle pathological features.
 
-**Metadata:** The dataset contains additional patient info (age, sex, localization) for further analysis.
+Key Points
+Performance Gains: Deep models capture fine-grained, localized features, crucial for differentiating benign vs. malignant lesions.
+Model Progression: Baseline → Logistic Regression → Basic NN → CNN reveals a shift from coarse global patterns to more nuanced, spatially-distributed features.
+Interpretability: Grad-CAM helps visualize the CNN’s focus, showing that advanced models attend to clinically relevant regions (lesion boundaries, color changes), whereas simpler models do not explicitly localize features.
+4. Models and Methods
+Baseline (Majority Class)
 
-### 2.1 Data Visualization
-**Class Distribution:**
-- **Figure 1:** A bar chart showing numeric labels (0–6) or diagnosis codes, revealing a strong imbalance. Label 0 ("nv") is the majority class (~7000 samples), while others are underrepresented.
+Predicts the most frequent lesion type in all cases.
+Serves as a minimal benchmark.
+Logistic Regression (LG)
 
-**Representative Images:**
-- **Figures 2–9:** Sample images from each lesion class, displayed three at a time.
+A linear model that attempts to separate classes in a high-dimensional space of raw or preprocessed pixel features.
+Captures global, linear patterns but struggles with non-linearities.
+Basic Neural Network (NN)
 
-**Grad-CAM Example:**
-- **Figure 10:** Demonstrates how the CNN highlights crucial lesion regions in images.
+A feedforward architecture with hidden layers, introducing non-linear activations to learn more complex relationships.
+Better than LG at handling moderate non-linearities but still lacks localized feature extraction like CNNs.
+Convolutional Neural Network (CNN)
 
-## 3. Hypothesis
-Different machine learning models capture distinct aspects of skin lesion images:
-- **Logistic Regression** learns global linear separability.
-- **Basic NN** captures non-linear relationships but lacks spatial awareness.
-- **CNN** extracts hierarchical, localized features, aligning with pathological patterns.
+Designed for image tasks, uses convolution and pooling to learn hierarchical features.
+We apply data augmentation, batch normalization, and interpretability via Grad-CAM.
+4.1 Training Setup
+Splits: Data is typically divided into training, validation, and test sets.
+Metrics: Accuracy, precision, recall, F1-score, confusion matrices.
+Visualization: We track training curves (loss, accuracy) and validation performance to ensure we are neither underfitting nor overfitting.
+5. Results
+Below are screenshots of the model training and performance logs for each approach, as tracked via Weights & Biases (WandB) or a similar platform. The x-axis typically represents training steps or epochs; the y-axis represents metrics like accuracy, loss, precision, recall, etc.
 
-### Key Insights:
-- **Performance Gains:** Deep models capture fine-grained details.
-- **Model Progression:** Increasing complexity shifts feature extraction from global to nuanced, spatially-distributed patterns.
-- **Interpretability:** Grad-CAM highlights crucial lesion boundaries, unlike simpler models.
+Baseline
 
-## 4. Models and Methods
-### Baseline (Majority Class)
-- Predicts the most frequent lesion type in all cases.
-- Serves as a minimal benchmark.
+Figure 11: Shows minimal improvement in metrics (e.g., accuracy ~ the proportion of the majority class).
+Achieves the lowest performance but confirms the presence of strong class imbalance (dominant “nv” class).
+Logistic Regression (LG)
 
-### Logistic Regression (LG)
-- A linear model that separates classes in high-dimensional space.
-- Captures global patterns but struggles with non-linearities.
+Figure 12: The logs indicate moderate accuracy gains, improved over baseline but still limited.
+The model can handle some linear separability in the data but cannot capture complex textures or color boundaries.
+Basic Neural Network (NN)
 
-### Basic Neural Network (NN)
-- A feedforward network with hidden layers and non-linear activations.
-- Handles moderate non-linearities but lacks spatial feature extraction.
+Figure 13: Training curves (train_accuracy, val_accuracy, train_loss, val_loss) show steady improvement.
+Final accuracy is higher than LG, reflecting the NN’s ability to learn non-linear feature combinations.
+CNN
 
-### Convolutional Neural Network (CNN)
-- Uses convolution and pooling to learn hierarchical features.
-- Includes data augmentation, batch normalization, and Grad-CAM interpretability.
+Figure 14: We see the best overall performance. The val_accuracy climbs steadily, and train_loss decreases significantly.
+Achieves the highest test accuracy, indicating effective learning of localized patterns.
+Grad-CAM (Figure 10) reveals the CNN focusing on relevant lesion regions, highlighting the interpretability advantage of advanced models.
+5.1 Observations
+Performance vs. Complexity: As hypothesized, the CNN outperforms simpler models. The baseline sets a low bar, LG improves upon it, the NN does better still, and the CNN performs best.
+Loss & Accuracy Trends: The CNN’s loss drops more sharply, and its accuracy climbs higher than other models, showing it effectively extracts crucial image features.
+Interpretability: Grad-CAM visualizations confirm the CNN attends to clinically meaningful regions. Simpler models do not offer such clear localization.
+6. Discussion
+Model Complexity Spectrum
 
-### 4.1 Training Setup
-- **Splits:** Training, validation, and test sets.
-- **Metrics:** Accuracy, precision, recall, F1-score, confusion matrices.
-- **Visualization:** Training curves to monitor underfitting/overfitting.
+Baseline and LG rely on global, often linear signals.
+The NN introduces non-linearity but still lacks spatial “awareness.”
+The CNN captures hierarchical, localized features, critical for lesion diagnosis.
+Latent Representation & Clinical Relevance
 
-## 5. Results
-Training logs tracked using Weights & Biases (WandB) or similar platforms.
+Grad-CAM overlays show the CNN “highlighting” lesion boundaries and color variations, aligning with dermatological diagnostic markers.
+Comparative Insight
 
-### **Baseline**
-- **Figure 11:** Minimal improvement in metrics, confirming strong class imbalance.
+The difference in confusion matrices across models indicates that advanced architectures reduce misclassification.
+Each increment in complexity yields better classification, though at the cost of more computational resources.
+Theoretical Implications
 
-### **Logistic Regression**
-- **Figure 12:** Moderate accuracy gains, limited by linear assumptions.
+Our findings support the notion that representation learning in CNNs is better suited for complex image tasks (like skin lesion analysis).
+The shift from global to local feature extraction can generalize to other medical imaging domains.
+7. Conclusion
+This project demonstrates how model complexity affects skin lesion classification:
 
-### **Basic Neural Network**
-- **Figure 13:** Training curves show steady improvement; outperforms LG.
+Baseline: Exposes the strong class imbalance, acts as a naive predictor.
+Logistic Regression: Improves upon baseline but limited by linear assumptions.
+Basic NN: Learns non-linear relationships, further boosting performance.
+CNN: Delivers the best results, leveraging localized feature extraction. Grad-CAM confirms the model’s focus on clinically relevant lesion regions.
+Takeaways:
 
-### **CNN**
-- **Figure 14:** Best performance. The validation accuracy improves significantly.
-- **Grad-CAM (Figure 10):** Highlights lesion regions, confirming interpretability.
-
-### **5.1 Observations**
-- **Performance vs. Complexity:** CNN outperforms simpler models.
-- **Loss & Accuracy Trends:** CNN loss decreases sharply; accuracy improves steadily.
-- **Interpretability:** Grad-CAM visualizations confirm CNN attends to meaningful regions.
-
-## 6. Discussion
-### Model Complexity Spectrum
-- **Baseline & LG:** Rely on global, often linear signals.
-- **NN:** Introduces non-linearity but lacks spatial awareness.
-- **CNN:** Extracts localized features, crucial for lesion diagnosis.
-
-### Latent Representation & Clinical Relevance
-- **Grad-CAM overlays** align with dermatological diagnostic markers.
-
-### Comparative Insight
-- **Confusion matrices** show CNN reduces misclassification.
-- **Increased complexity yields better classification** but demands higher computational resources.
-
-### Theoretical Implications
-- CNN representation learning generalizes to other medical imaging tasks.
-
-## 7. Conclusion
-This study demonstrates the relationship between model complexity and skin lesion classification accuracy:
-- **Baseline:** Highlights class imbalance, naive predictor.
-- **Logistic Regression:** Limited by linear separability.
-- **Basic NN:** Captures non-linear features, improving performance.
-- **CNN:** Achieves best accuracy, leveraging localized feature extraction.
-
-### Key Takeaways
-- Deep learning significantly improves skin lesion classification.
-- Grad-CAM enhances interpretability in clinical contexts.
-- Future work may explore advanced architectures (Transformers, ensembles) and better integration of clinical metadata.
-
-## 8. References & Further Reading
-- **HAM10000 Dataset:** [Kaggle](https://www.kaggle.com/datasets/kmader/skin-cancer-mnist-ham10000)
-- **Grad-CAM:** Selvaraju, R. R., et al. "Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization." *ICCV, 2017.*
-- **Representation Learning:** Bengio, Y., et al. "Representation learning: A review and new perspectives." *IEEE Transactions on Pattern Analysis and Machine Intelligence, 2013.*
+Deep learning significantly enhances classification accuracy for skin lesions.
+Interpretability (e.g., Grad-CAM) is essential in clinical contexts to verify the model is looking at the right features.
+Future Work may involve more advanced architectures (e.g., Transformers, ensembles), integration of clinical data, or refined interpretability tools.
+8. References & Further Reading
+HAM10000 Dataset: Kaggle Link
+Grad-CAM: Selvaraju, R. R., et al. “Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization.” ICCV, 2017.
+Representation Learning: Bengio, Y., et al. “Representation learning: A review and new perspectives.” IEEE transactions on pattern analysis and machine intelligence, 2013.
 
 ## Appendix: Figures
 | Figure | Description |

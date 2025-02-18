@@ -139,7 +139,7 @@ Below are screenshots of model training and performance logs (via Weights & Bias
 ### Our thoughts regarding the hypothesis:
 Our CNN successfully learned to capture localized, hierarchical features such as lesion boundaries, areas of color variation, and texture transitions—elements that are critical in clinical assessments. Grad-CAM visualizations confirmed that the model focused on these key regions, demonstrating its ability to extract fine-grained patterns that simpler models might miss. However, our model appeared to fall short in capturing the broader global context and some subtle textural nuances across the entire image, which are also essential for distinguishing between closely related lesion types. This indicates that while our CNN extracts important localized features, its overall representation of the complex distribution within the dataset is incomplete.
 So, we can say that our hypothesis was partially correct, as we said earlier "more complex architectures (basic NNs, CNNs) uncover hierarchical, non-linear representations aligned with subtle pathological features."
-and although we captured the more complex things, the global context was not captured quite well.
+Although we captured the more complex things, the global context was not captured quite well, which partially contradicts our hypothesis.
 
 
 ## 7. Conclusion

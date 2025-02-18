@@ -9,16 +9,24 @@ from sklearn.metrics import precision_score, recall_score
 import wandb
 import copy
 from torchvision import transforms
+import cv2
 
+# Set project paths
 PROJECT_DIR = r"C:\Users\Barak\PycharmProjects\DLproject"
 ARCHIVE_DIR = os.path.join(PROJECT_DIR, "archive")
 CSV_PATH = os.path.join(ARCHIVE_DIR, "hmnist_28_28_RGB.csv")
 
-# Dataset definition
 
+# High-level hypothesis (documented here):
+# We hypothesize that deep CNNs capture fine-grained, hierarchical features that align with clinically
+# relevant regions in skin lesion images. Interpretability methods like Grad-CAM can then reveal that
+# these models focus on diagnostic regions, validating our theoretical preconceptions.
+
+# Dataset definition
 class SkinDataset(Dataset):
     def __init__(self, features, labels, transform=None):
-        self.features = features.reshape(-1, 3, 28, 28)  # Reshape to 3x28x28 for RGB
+        # Reshape features to [num_samples, 3, 28, 28] for RGB images
+        self.features = features.reshape(-1, 3, 28, 28)
         self.labels = labels
         self.transform = transform
 
@@ -32,8 +40,8 @@ class SkinDataset(Dataset):
         y = torch.tensor(self.labels[idx], dtype=torch.long)
         return x, y
 
-# CNN Model definition
 
+# CNN Model definition
 class ImprovedCNNModel(nn.Module):
     def __init__(self, num_classes):
         super(ImprovedCNNModel, self).__init__()
@@ -81,9 +89,60 @@ class ImprovedCNNModel(nn.Module):
         return x
 
 
-# Main function
-def main(csv_path=CSV_PATH):
-    # Initialize WandB
+# Grad-CAM implementation (exposed for external visualization in main.py)
+def generate_gradcam(model, input_tensor, target_class, target_layer):
+    """
+    Generate a Grad-CAM heatmap for the given input image and target class.
+    """
+    model.eval()
+    gradients = []
+    activations = []
+
+    def backward_hook(module, grad_input, grad_output):
+        gradients.append(grad_output[0])
+
+    def forward_hook(module, input, output):
+        activations.append(output)
+
+    hook_forward = target_layer.register_forward_hook(forward_hook)
+    hook_backward = target_layer.register_backward_hook(backward_hook)
+
+    # Forward pass
+    output = model(input_tensor)
+    model.zero_grad()
+    one_hot = torch.zeros_like(output)
+    one_hot[0][target_class] = 1
+    output.backward(gradient=one_hot, retain_graph=True)
+
+    grad = gradients[0].detach()  # [batch, channels, H, W]
+    activation = activations[0].detach()  # [batch, channels, H, W]
+
+    # Global average pooling over gradients to obtain weights
+    weights = torch.mean(grad, dim=(2, 3))[0]
+
+    # Compute weighted combination of activation maps
+    cam = torch.zeros(activation.shape[2:], dtype=torch.float32)
+    for i, w in enumerate(weights):
+        cam += w * activation[0, i, :, :]
+
+    cam = torch.clamp(cam, min=0)
+    cam -= cam.min()
+    if cam.max() != 0:
+        cam /= cam.max()
+    cam = cam.cpu().numpy()
+
+    # Resize heatmap to input image size
+    import cv2  # local import if needed
+    cam = cv2.resize(cam, (input_tensor.shape[3], input_tensor.shape[2]))
+
+    hook_forward.remove()
+    hook_backward.remove()
+
+    return cam
+
+
+def run_CNN():
+    """Train the improved CNN model and return the best model along with one sample image from the test set."""
     wandb.init(project="Deep Learning", name="improved_cnn_model")
     wandb.config.update({
         "batch_size": 64,
@@ -93,14 +152,14 @@ def main(csv_path=CSV_PATH):
 
     # Load CSV data
     try:
-        df = pd.read_csv(csv_path)
+        df = pd.read_csv(CSV_PATH)
     except FileNotFoundError:
-        print(f"Error: CSV file not found at: {csv_path}")
-        return
+        print(f"Error: CSV file not found at: {CSV_PATH}")
+        return None, None
 
     if 'label' not in df.columns:
         print("Error: 'label' column not found in the CSV.")
-        return
+        return None, None
 
     features = df.drop('label', axis=1).values
     labels = df['label'].values
@@ -169,71 +228,31 @@ def main(csv_path=CSV_PATH):
                 _, predicted = torch.max(outputs, 1)
                 total_val += batch_labels.size(0)
                 correct_val += (predicted == batch_labels).sum().item()
-
                 all_labels.extend(batch_labels.cpu().numpy())
                 all_predictions.extend(predicted.cpu().numpy())
 
         val_loss /= len(val_loader.dataset)
         val_accuracy = 100 * correct_val / total_val
-        val_precision = precision_score(all_labels, all_predictions, average="macro")
-        val_recall = recall_score(all_labels, all_predictions, average="macro")
         scheduler.step(val_accuracy)
 
-        print(f"Epoch [{epoch + 1}/{num_epochs}] - "
-              f"Train Accuracy: {train_accuracy:.2f}%, "
-              f"Val Loss: {val_loss:.4f}, "
-              f"Val Accuracy: {val_accuracy:.2f}%, "
-              f"Val Precision: {val_precision:.2f}, "
-              f"Val Recall: {val_recall:.2f}")
-
-        wandb.log({
-            "epoch": epoch + 1,
-            "train_loss": train_loss,
-            "val_loss": val_loss,
-            "val_accuracy": val_accuracy,
-            "val_precision": val_precision,
-            "val_recall": val_recall,
-            "learning_rate": optimizer.param_groups[0]['lr']
-        })
+        print(f"Epoch [{epoch + 1}/{num_epochs}] - Train Acc: {train_accuracy:.2f}%, Val Acc: {val_accuracy:.2f}%")
+        wandb.log({"epoch": epoch + 1, "train_loss": train_loss, "val_loss": val_loss,
+                   "val_accuracy": val_accuracy})
 
         if val_accuracy > best_val_accuracy:
             best_val_accuracy = val_accuracy
             best_model = copy.deepcopy(model)
 
     wandb.log({"best_val_accuracy": best_val_accuracy})
-
-    # Test
-    model = best_model
-    correct_test = 0
-    total_test = 0
-    all_test_labels = []
-    all_test_predictions = []
-
-    with torch.no_grad():
-        for batch_features, batch_labels in test_loader:
-            outputs = model(batch_features)
-            _, predicted = torch.max(outputs, 1)
-            total_test += batch_labels.size(0)
-            correct_test += (predicted == batch_labels).sum().item()
-
-            all_test_labels.extend(batch_labels.cpu().numpy())
-            all_test_predictions.extend(predicted.cpu().numpy())
-
-    test_accuracy = 100 * correct_test / total_test
-    test_precision = precision_score(all_test_labels, all_test_predictions, average="macro")
-    test_recall = recall_score(all_test_labels, all_test_predictions, average="macro")
-
-    print(f"Test Accuracy: {test_accuracy:.2f}%, "
-          f"Test Precision: {test_precision:.2f}, "
-          f"Test Recall: {test_recall:.2f}")
-
-    wandb.log({
-        "test_accuracy": test_accuracy,
-        "test_precision": test_precision,
-        "test_recall": test_recall
-    })
-
     wandb.finish()
 
-if __name__ == "__main__":
-    main()
+    # Instead of visualizing Grad-CAM here, we return the best model and one sample from the test set.
+    if len(test_loader.dataset) > 0:
+        sample_img, _ = next(iter(test_loader))
+    else:
+        sample_img = None
+    return best_model, sample_img
+
+
+# Expose the Grad-CAM function so that main.py can call it.
+__all__ = ["run_CNN", "generate_gradcam"]
